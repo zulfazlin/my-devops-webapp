@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My DevOps Journey</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .status {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .version {
+            text-align: center;
+            font-size: 14px;
+            opacity: 0.8;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Welcome to My DevOps Learning Journey</h1>
+        
+        <div class="status">
+            <h3>Application Status: ✅ Running</h3>
+            <p>Server: <span id="server-info">Loading...</span></p>
+            <p>Deployment Time: <span id="deploy-time"></span></p>
+        </div>
+        
+        <div class="status">
+            <h3>📚 Learning Progress</h3>
+            <ul>
+                <li>🔄 Creating web application</li>
+                <li>⏳ Setting up AWS infrastructure</li>
+                <li>⏳ Implementing CI/CD pipeline</li>
+                <li>⏳ Adding monitoring & logging</li>
+            </ul>
+        </div>
+        
+        <div class="version">
+            Version 1.0.0 | Built with ❤️ for DevOps Learning
+        </div>
+    </div>
+
+    <script>
+        // Display current time as deployment time
+        document.getElementById('deploy-time').textContent = new Date().toLocaleString();
+        
+        // Simple server info (in real deployment, this could come from an API)
+        document.getElementById('server-info').textContent = window.location.hostname || 'localhost';
+        
+        // Add some interactivity
+        document.querySelector('h1').addEventListener('click', function() {
+            this.style.transform = this.style.transform === 'scale(1.1)' ? 'scale(1)' : 'scale(1.1)';
+            this.style.transition = 'transform 0.3s ease';
+        });
+    </script>
+</body>
+</html>
