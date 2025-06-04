@@ -1,6 +1,5 @@
-name: 🚀 Deploy to AWS EC2
+name: Deploy to AWS EC2
 
-# Trigger the workflow on push to main branch and manual dispatch
 on:
   push:
     branches: [ main ]
@@ -16,16 +15,14 @@ on:
         required: false
         default: 'Manual deployment'
 
-# Environment variables
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   INSTANCE_TAG_NAME: my-webapp-server
   SSH_USER: ec2-user
 
 jobs:
-  # Job 1: Run tests and validation
   test:
-    name: 🧪 Test & Validate
+    name: Test and Validate
     runs-on: ubuntu-latest
     
     steps:
@@ -34,73 +31,64 @@ jobs:
     
     - name: Validate HTML
       run: |
-        echo "🔍 Validating HTML structure..."
+        echo "Validating HTML structure..."
         
-        # Check if HTML file exists
         if [ ! -f "src/index.html" ]; then
-          echo "❌ HTML file not found!"
+          echo "HTML file not found!"
           exit 1
         fi
         
-        # Basic HTML validation
         if grep -q "<!DOCTYPE html>" src/index.html; then
-          echo "✅ DOCTYPE declaration found"
+          echo "DOCTYPE declaration found"
         else
-          echo "❌ DOCTYPE declaration missing"
+          echo "DOCTYPE declaration missing"
           exit 1
         fi
         
         if grep -q "<title>" src/index.html; then
-          echo "✅ Title tag found"
+          echo "Title tag found"
         else
-          echo "❌ Title tag missing"
+          echo "Title tag missing"
           exit 1
         fi
         
         if grep -q "DevOps Learning Journey" src/index.html; then
-          echo "✅ Expected content found"
+          echo "Expected content found"
         else
-          echo "❌ Expected content missing"
+          echo "Expected content missing"
           exit 1
         fi
         
-        echo "✅ HTML validation passed!"
+        echo "HTML validation passed!"
     
     - name: Check file size
       run: |
-        echo "📊 Checking file sizes..."
+        echo "Checking file sizes..."
         ls -lh src/
         
-        # Ensure HTML file isn't too large (basic check)
         size=$(stat -c%s src/index.html)
         if [ $size -gt 100000 ]; then
-          echo "⚠️ HTML file is quite large: $size bytes"
+          echo "HTML file is quite large: $size bytes"
         else
-          echo "✅ File size acceptable: $size bytes"
+          echo "File size acceptable: $size bytes"
         fi
     
     - name: Security scan
       run: |
-        echo "🔒 Running basic security checks..."
+        echo "Running basic security checks..."
         
-        # Check for potential security issues in HTML
         if grep -i "javascript:" src/index.html; then
-          echo "⚠️ Found javascript: protocol - review for XSS"
+          echo "Found javascript: protocol - review for XSS"
         fi
         
         if grep -i "eval(" src/index.html; then
-          echo "⚠️ Found eval() function - potential security risk"
+          echo "Found eval() function - potential security risk"
         fi
         
-        if grep -i "innerHTML.*=" src/index.html; then
-          echo "⚠️ Found innerHTML assignment - review for XSS"
-        fi
-        
-        echo "✅ Basic security scan completed"
+        echo "Basic security scan completed"
 
-  # Job 2: Deploy to EC2 (only if tests pass)
   deploy:
-    name: 🚀 Deploy to EC2
+    name: Deploy to EC2
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
@@ -122,25 +110,21 @@ jobs:
     
     - name: Verify AWS connection
       run: |
-        echo "🔧 Verifying AWS connection..."
+        echo "Verifying AWS connection..."
         aws sts get-caller-identity
-        echo "✅ AWS connection verified"
+        echo "AWS connection verified"
     
     - name: Set up SSH key
       run: |
-        echo "🔑 Setting up SSH key..."
+        echo "Setting up SSH key..."
         mkdir -p ~/.ssh
         echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deployment-key.pem
         chmod 400 ~/.ssh/deployment-key.pem
-        ssh-keyscan -H $(aws ec2 describe-instances \
-          --filters "Name=tag:Name,Values=$INSTANCE_TAG_NAME" "Name=instance-state-name,Values=running" \
-          --query 'Reservations[0].Instances[0].PublicIpAddress' \
-          --output text) >> ~/.ssh/known_hosts 2>/dev/null || true
     
     - name: Get EC2 instance information
       id: instance-info
       run: |
-        echo "📡 Getting EC2 instance information..."
+        echo "Getting EC2 instance information..."
         
         INSTANCE_INFO=$(aws ec2 describe-instances \
           --filters "Name=tag:Name,Values=$INSTANCE_TAG_NAME" "Name=instance-state-name,Values=running" \
@@ -148,7 +132,7 @@ jobs:
           --output text)
         
         if [ "$INSTANCE_INFO" = "None	None	None" ]; then
-          echo "❌ No running instance found with tag Name=$INSTANCE_TAG_NAME"
+          echo "No running instance found with tag Name=$INSTANCE_TAG_NAME"
           exit 1
         fi
         
@@ -158,19 +142,23 @@ jobs:
         echo "instance-ip=$INSTANCE_IP" >> $GITHUB_OUTPUT
         echo "state=$STATE" >> $GITHUB_OUTPUT
         
-        echo "✅ Found instance: $INSTANCE_ID ($INSTANCE_IP) - $STATE"
+        echo "Found instance: $INSTANCE_ID ($INSTANCE_IP) - $STATE"
+    
+    - name: Add to known hosts
+      run: |
+        ssh-keyscan -H ${{ steps.instance-info.outputs.instance-ip }} >> ~/.ssh/known_hosts 2>/dev/null || true
     
     - name: Test SSH connectivity
       run: |
-        echo "🔗 Testing SSH connectivity..."
+        echo "Testing SSH connectivity..."
         ssh -i ~/.ssh/deployment-key.pem -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
           $SSH_USER@${{ steps.instance-info.outputs.instance-ip }} \
           "echo 'SSH connection successful'"
-        echo "✅ SSH connection verified"
+        echo "SSH connection verified"
     
     - name: Create deployment backup
       run: |
-        echo "💾 Creating backup of current deployment..."
+        echo "Creating backup of current deployment..."
         
         TIMESTAMP=$(date +%Y%m%d_%H%M%S)
         
@@ -178,16 +166,16 @@ jobs:
           sudo mkdir -p /var/www/html/backups
           if [ -f /var/www/html/index.html ]; then
             sudo cp /var/www/html/index.html /var/www/html/backups/index.html.$TIMESTAMP
-            echo "✅ Backup created: index.html.$TIMESTAMP"
+            echo "Backup created: index.html.$TIMESTAMP"
           else
-            echo "ℹ️ No existing deployment to backup"
+            echo "No existing deployment to backup"
           fi
-EOF
+        EOF
     
     - name: Deploy application
       id: deploy
       run: |
-        echo "🚀 Deploying application..."
+        echo "Deploying application..."
         
         DEPLOYMENT_TIME=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
         
@@ -209,30 +197,30 @@ EOF
           
           # Verify Apache is running
           if sudo systemctl is-active httpd > /dev/null; then
-            echo "✅ Apache is running"
+            echo "Apache is running"
           else
-            echo "❌ Apache failed to start"
+            echo "Apache failed to start"
             exit 1
           fi
-EOF
+        EOF
         
         echo "instance-ip=${{ steps.instance-info.outputs.instance-ip }}" >> $GITHUB_OUTPUT
         echo "deployment-time=$DEPLOYMENT_TIME" >> $GITHUB_OUTPUT
         
-        echo "✅ Deployment completed successfully"
+        echo "Deployment completed successfully"
     
     - name: Verify deployment
       run: |
-        echo "🧪 Verifying deployment..."
+        echo "Verifying deployment..."
         
         # Test HTTP response
         HTTP_STATUS=$(ssh -i ~/.ssh/deployment-key.pem $SSH_USER@${{ steps.instance-info.outputs.instance-ip }} \
           "curl -s -o /dev/null -w '%{http_code}' http://localhost")
         
         if [ "$HTTP_STATUS" = "200" ]; then
-          echo "✅ HTTP test passed (Status: $HTTP_STATUS)"
+          echo "HTTP test passed (Status: $HTTP_STATUS)"
         else
-          echo "❌ HTTP test failed (Status: $HTTP_STATUS)"
+          echo "HTTP test failed (Status: $HTTP_STATUS)"
           exit 1
         fi
         
@@ -241,17 +229,16 @@ EOF
           "curl -s http://localhost | grep -q 'DevOps Learning Journey'"
         
         if [ $? -eq 0 ]; then
-          echo "✅ Content verification passed"
+          echo "Content verification passed"
         else
-          echo "❌ Content verification failed"
+          echo "Content verification failed"
           exit 1
         fi
         
-        echo "🎉 Deployment verification completed successfully!"
+        echo "Deployment verification completed successfully!"
 
-  # Job 3: Post-deployment notification and summary
   notify:
-    name: 📢 Deployment Summary
+    name: Deployment Summary
     needs: [test, deploy]
     runs-on: ubuntu-latest
     if: always()
@@ -260,32 +247,33 @@ EOF
     - name: Deployment Summary
       run: |
         echo "================================================"
-        echo "🚀 DEPLOYMENT SUMMARY"
+        echo "DEPLOYMENT SUMMARY"
         echo "================================================"
         echo ""
-        echo "📊 Job Results:"
+        echo "Job Results:"
         echo "   Tests: ${{ needs.test.result }}"
         echo "   Deployment: ${{ needs.deploy.result }}"
         echo ""
         
         if [ "${{ needs.deploy.result }}" = "success" ]; then
-          echo "✅ Deployment Status: SUCCESS"
-          echo "🌐 Application URL: http://${{ needs.deploy.outputs.instance-ip }}"
-          echo "📅 Deployment Time: ${{ needs.deploy.outputs.deployment-time }}"
-          echo "🔗 Commit: ${{ github.sha }}"
-          echo "👤 Deployed by: ${{ github.actor }}"
+          echo "Deployment Status: SUCCESS"
+          echo "Application URL: http://${{ needs.deploy.outputs.instance-ip }}"
+          echo "Deployment Time: ${{ needs.deploy.outputs.deployment-time }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Deployed by: ${{ github.actor }}"
           
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "📝 Message: ${{ github.event.inputs.deploy_message }}"
+            echo "Message: ${{ github.event.inputs.deploy_message }}"
           fi
         else
-          echo "❌ Deployment Status: FAILED"
-          echo "📋 Check the logs above for details"
+          echo "Deployment Status: FAILED"
+          echo "Check the logs above for details"
         fi
         
         echo ""
-        echo "🔧 Useful commands:"
-        echo "   View logs: ssh -i key.pem ec2-user@${{ needs.deploy.outputs.instance-ip }} 'sudo tail -f /var/log/httpd/access_log'"
-        echo "   Server status: Visit your GitHub repo → Actions → View workflow logs"
+        echo "Useful commands:"
+        instance_ip="${{ needs.deploy.outputs.instance-ip }}"
+        echo "   View logs: ssh -i key.pem ec2-user@${instance_ip} 'sudo tail -f /var/log/httpd/access_log'"
+        echo "   Server status: Visit your GitHub repo Actions tab"
         echo ""
         echo "================================================"
