@@ -1,0 +1,193 @@
+name: 🧪 Test Pull Request
+
+# Trigger on pull requests to main branch
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'scripts/**'
+      - '.github/workflows/**'
+
+jobs:
+  test:
+    name: 🧪 Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Validate HTML structure
+      run: |
+        echo "🔍 Validating HTML files..."
+        
+        # Find all HTML files
+        html_files=$(find src -name "*.html" -type f)
+        
+        if [ -z "$html_files" ]; then
+          echo "❌ No HTML files found in src directory"
+          exit 1
+        fi
+        
+        for file in $html_files; do
+          echo "Checking $file..."
+          
+          # Check basic HTML structure
+          if ! grep -q "<!DOCTYPE html>" "$file"; then
+            echo "❌ Missing DOCTYPE in $file"
+            exit 1
+          fi
+          
+          if ! grep -q "<html" "$file"; then
+            echo "❌ Missing <html> tag in $file"
+            exit 1
+          fi
+          
+          if ! grep -q "<head>" "$file"; then
+            echo "❌ Missing <head> section in $file"
+            exit 1
+          fi
+          
+          if ! grep -q "<body>" "$file"; then
+            echo "❌ Missing <body> section in $file"
+            exit 1
+          fi
+          
+          if ! grep -q "<title>" "$file"; then
+            echo "❌ Missing <title> tag in $file"
+            exit 1
+          fi
+          
+          echo "✅ $file structure is valid"
+        done
+        
+        echo "✅ All HTML files validated successfully"
+    
+    - name: Check for security issues
+      run: |
+        echo "🔒 Scanning for potential security issues..."
+        
+        # Check for dangerous patterns
+        security_issues=0
+        
+        if grep -r "javascript:" src/; then
+          echo "⚠️ Found javascript: protocol usage"
+          security_issues=$((security_issues + 1))
+        fi
+        
+        if grep -r "eval(" src/; then
+          echo "⚠️ Found eval() function usage"
+          security_issues=$((security_issues + 1))
+        fi
+        
+        if grep -r "document.write" src/; then
+          echo "⚠️ Found document.write usage"
+          security_issues=$((security_issues + 1))
+        fi
+        
+        if grep -r "innerHTML.*=" src/; then
+          echo "⚠️ Found innerHTML assignment"
+          security_issues=$((security_issues + 1))
+        fi
+        
+        if [ $security_issues -gt 0 ]; then
+          echo "⚠️ Found $security_issues potential security issues"
+          echo "   Please review the code for XSS vulnerabilities"
+        else
+          echo "✅ No obvious security issues found"
+        fi
+    
+    - name: Check deployment scripts
+      run: |
+        echo "🔧 Validating deployment scripts..."
+        
+        if [ -d "scripts" ]; then
+          # Check if scripts exist
+          for script in deploy.sh server-status.sh rollback.sh; do
+            if [ -f "scripts/$script" ]; then
+              echo "✅ Found $script"
+              
+              # Check if script has shebang
+              if head -1 "scripts/$script" | grep -q "#!/bin/bash"; then
+                echo "✅ $script has proper shebang"
+              else
+                echo "❌ $script missing shebang"
+                exit 1
+              fi
+            else
+              echo "⚠️ Missing script: $script"
+            fi
+          done
+        else
+          echo "⚠️ Scripts directory not found"
+        fi
+    
+    - name: File size check
+      run: |
+        echo "📊 Checking file sizes..."
+        
+        # Check HTML file sizes
+        find src -name "*.html" -exec ls -lh {} \;
+        
+        # Warn about large files
+        find src -name "*.html" -size +100k -exec echo "⚠️ Large file: {}" \;
+        
+        echo "✅ File size check completed"
+    
+    - name: Content validation
+      run: |
+        echo "📝 Validating content..."
+        
+        # Check if main content exists
+        if grep -q "DevOps Learning Journey" src/index.html; then
+          echo "✅ Main title found"
+        else
+          echo "❌ Main title missing"
+          exit 1
+        fi
+        
+        # Check for progress indicators
+        if grep -q "✅\|🔄\|⏳" src/index.html; then
+          echo "✅ Progress indicators found"
+        else
+          echo "⚠️ No progress indicators found"
+        fi
+        
+        echo "✅ Content validation passed"
+    
+    - name: Accessibility check
+      run: |
+        echo "♿ Basic accessibility check..."
+        
+        # Check for alt attributes on images
+        if grep -q "<img" src/index.html; then
+          if grep "<img" src/index.html | grep -v "alt="; then
+            echo "⚠️ Found images without alt attributes"
+          else
+            echo "✅ Images have alt attributes"
+          fi
+        fi
+        
+        # Check for proper heading structure
+        if grep -q "<h[1-6]" src/index.html; then
+          echo "✅ Headings found"
+        else
+          echo "⚠️ No headings found"
+        fi
+        
+        echo "✅ Basic accessibility check completed"
+    
+    - name: Generate test report
+      if: always()
+      run: |
+        echo "📋 TEST REPORT"
+        echo "=============="
+        echo "Pull Request: #${{ github.event.number }}"
+        echo "Branch: ${{ github.head_ref }}"
+        echo "Author: ${{ github.event.pull_request.user.login }}"
+        echo "Files changed:"
+        echo "${{ github.event.pull_request.changed_files }}"
+        echo ""
+        echo "✅ All tests completed"
+        echo "Ready for review and merge!"
