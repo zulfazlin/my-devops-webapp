@@ -1,0 +1,8 @@
+*.log
+.env
+*.pem
+.aws/
+node_modules/
+.DS_Store
+*~
+Thumbs.db
